@@ -1,0 +1,149 @@
+:root {
+  --bg: #f2f2f0;
+  --panel: #e7e7e5;
+  --light: #d8d8d6;
+  --dark: #9c9c98;
+  --text: #2f2f2d;
+  --accent: #676764;
+  --selected: #bbbb75;
+  --hint: #8d8d89;
+  --quantum: #6f6fb5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.app {
+  width: min(940px, 95vw);
+  background: var(--panel);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+h1 {
+  margin: 0;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+button,
+select {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: #cacac7;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover,
+select:hover {
+  background: #b9b9b6;
+}
+
+.status-panel {
+  margin: 16px 0;
+  background: #dcdcd9;
+  border-radius: 16px;
+  padding: 12px 16px;
+}
+
+.status-panel p {
+  margin: 4px 0;
+}
+
+.board-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.board {
+  width: min(74vw, 620px);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #8f8f8c;
+}
+
+.square {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(28px, 4.5vw, 48px);
+  user-select: none;
+}
+
+.square.light {
+  background: var(--light);
+}
+
+.square.dark {
+  background: var(--dark);
+}
+
+.square.selected {
+  box-shadow: inset 0 0 0 4px var(--selected);
+}
+
+.square.hint::after {
+  content: "";
+  width: 24%;
+  height: 24%;
+  border-radius: 50%;
+  background: rgba(60, 60, 60, 0.35);
+}
+
+.square.quantum-target {
+  box-shadow: inset 0 0 0 3px var(--quantum);
+}
+
+.piece {
+  filter: saturate(0.1) contrast(1.2);
+}
+
+.piece.quantum {
+  opacity: 0.7;
+  text-shadow: 0 0 10px rgba(95, 95, 190, 0.4);
+}
+
+.square-label {
+  position: absolute;
+  font-size: 11px;
+  left: 4px;
+  bottom: 2px;
+  opacity: 0.5;
+}
