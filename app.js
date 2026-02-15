@@ -383,8 +383,28 @@ function materializeBySelection(sourceSq) {
   pushUndoSnapshot();
   if (!collapseForOwnerMovement(sourceSq)) return false;
   playTone("quantumCollapse");
-  completeTurn(`Waveform collapsed at ${sourceSq}.`);
+  completeTurn(`${game.turn === "w" ? "White" : "Black"} materialized quantum piece at ${sourceSq}.`);
   return true;
+}
+
+function pieceLabel(piece) {
+  return piece ? piece.type.toUpperCase() : "?";
+}
+
+function describeMove(from, move, piece, captured, collapseMsg, promoted) {
+  const fromSq = toSquare(from.r, from.c);
+  const toSq = toSquare(move.r, move.c);
+  const actor = piece.color === "w" ? "White" : "Black";
+  const captureText = captured ? ` capturing ${pieceLabel(captured)}` : "";
+
+  if (move.kind === "castle-k") return `${actor} castles kingside (${fromSq}→${toSq}).`;
+  if (move.kind === "castle-q") return `${actor} castles queenside (${fromSq}→${toSq}).`;
+  if (move.kind === "enpassant") return `${actor} ${pieceLabel(piece)} ${fromSq}→${toSq} en passant capture.`;
+
+  const base = `${actor} ${pieceLabel(piece)} ${fromSq}→${toSq}${captureText}.`;
+  const promo = promoted ? ` Promotes to Q.` : "";
+  const collapse = collapseMsg ? ` ${collapseMsg}` : "";
+  return `${base}${promo}${collapse}`;
 }
 
 function tryCollapseOnCapture(targetSq) {
@@ -410,8 +430,15 @@ function executeMove(from, move) {
 
   const targetSq = toSquare(move.r, move.c);
   let collapseMsg = "";
-  const targetPiece = pieceAt(game.board, move.r, move.c);
-  if (targetPiece && targetPiece.quantumId) collapseMsg = tryCollapseOnCapture(targetSq);
+  let captured = pieceAt(game.board, move.r, move.c);
+  if (captured && captured.quantumId) {
+    collapseMsg = tryCollapseOnCapture(targetSq);
+    captured = collapseMsg.includes("got captured") ? { type: captured.type, color: captured.color } : null;
+  }
+  if (move.kind === "enpassant") {
+    const epRow = piece.color === "w" ? move.r + 1 : move.r - 1;
+    captured = game.board[epRow][move.c];
+  }
 
   game.board = applyMove(game.board, from, move, game.turn);
   game.enPassantTarget = null;
@@ -420,9 +447,13 @@ function executeMove(from, move) {
     game.enPassantTarget = toSquare(passR, from.c);
   }
 
+  const movedPiece = game.board[move.r][move.c];
+  const promoted = piece.type === "p" && movedPiece && movedPiece.type === "q" && (move.r === 0 || move.r === 7);
+  const moveText = describeMove(from, move, piece, captured, collapseMsg, promoted);
+
   game.moveHistory.push(`${toSquare(from.r, from.c)}-${targetSq}`);
   playTone("move");
-  completeTurn(collapseMsg);
+  completeTurn(moveText);
   return true;
 }
 
@@ -440,7 +471,7 @@ function createQuantumMove(from, toA, toB) {
 
   game.quantumUses[game.turn] -= 1;
   playTone("quantumIgnite");
-  completeTurn(`Quantum split created at ${sqA} and ${sqB}.`);
+  completeTurn(`${piece.color === "w" ? "White" : "Black"} ${pieceLabel(piece)} entered superposition at ${sqA} and ${sqB}.`);
 }
 
 function squareClick(r, c) {

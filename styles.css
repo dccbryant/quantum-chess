@@ -45,7 +45,7 @@ body {
 
 h1 {
   margin: 0;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   font-weight: 500;
   text-transform: uppercase;
   align-self: flex-start;
@@ -231,17 +231,18 @@ select:hover {
 
 .piece.quantum {
   filter: none;
-  color: #00b140;
-  opacity: 0.98;
-  text-shadow: 0 0 4px rgba(0, 177, 64, 0.9), 0 0 14px rgba(0, 177, 64, 0.65);
-  animation: hologram-flicker 110ms steps(2) infinite;
+  color: #2ddc73;
+  opacity: 0.96;
+  text-shadow: 0 0 5px rgba(45, 220, 115, 0.95), 0 0 16px rgba(45, 220, 115, 0.78), 0 0 24px rgba(45, 220, 115, 0.45);
+  animation: hologram-flicker 85ms steps(2) infinite;
 }
 
 @keyframes hologram-flicker {
-  0% { opacity: 1; transform: translateY(0); }
-  35% { opacity: 0.7; transform: translateY(0.6px); }
-  60% { opacity: 0.96; transform: translateY(-0.4px); }
-  100% { opacity: 0.82; transform: translateY(0); }
+  0% { opacity: 0.96; transform: translateY(0) skewX(0deg); }
+  25% { opacity: 0.72; transform: translateY(0.8px) skewX(-1.1deg); }
+  48% { opacity: 0.98; transform: translateY(-0.5px) skewX(0.6deg); }
+  70% { opacity: 0.76; transform: translateY(0.4px) skewX(-0.8deg); }
+  100% { opacity: 0.92; transform: translateY(0) skewX(0deg); }
 }
 
 .square-label {
