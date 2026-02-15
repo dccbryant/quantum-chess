@@ -17,6 +17,7 @@ const PIECES = {
   w: { k: "♔", q: "♕", r: "♖", b: "♗", n: "♘", p: "♙" },
   b: { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" },
 };
+const PIECE_NAMES = { k: "King", q: "Queen", r: "Rook", b: "Bishop", n: "Knight", p: "Pawn" };
 
 let game;
 let audioCtx;
@@ -334,10 +335,12 @@ function redoMove() {
   render();
 }
 
-function setMessage(msg) {
+function setMessage(msg, log = true) {
   game.currentMessage = msg;
-  game.messageHistory.push(msg);
-  historyNeedsScrollToBottom = true;
+  if (log) {
+    game.messageHistory.push(msg);
+    historyNeedsScrollToBottom = true;
+  }
 }
 
 function showWinModal(text) {
@@ -388,7 +391,7 @@ function materializeBySelection(sourceSq) {
 }
 
 function pieceLabel(piece) {
-  return piece ? piece.type.toUpperCase() : "?";
+  return piece ? PIECE_NAMES[piece.type] || "Piece" : "Piece";
 }
 
 function describeMove(from, move, piece, captured, collapseMsg, promoted) {
@@ -486,7 +489,7 @@ function squareClick(r, c) {
       if (!exists) game.pendingQuantum.targets.push({ r, c });
       if (game.pendingQuantum.targets.length === 2) createQuantumMove(game.selected, game.pendingQuantum.targets[0], game.pendingQuantum.targets[1]);
       else {
-        setMessage("Select a second legal destination to complete superposition.");
+        setMessage("Select a second legal destination to complete superposition.", false);
         render();
       }
       return;
@@ -506,7 +509,7 @@ function squareClick(r, c) {
     game.legalMoves = legalMovesForSquare(r, c);
     game.pendingQuantum = { targets: [] };
     playTone("select");
-    setMessage(game.quantumMode ? "Choose two legal destination squares." : "Select destination.");
+    setMessage(game.quantumMode ? "Choose two legal destination squares." : "Select destination.", false);
   } else {
     game.selected = null;
     game.legalMoves = [];
@@ -610,7 +613,7 @@ quantumToggleBtn.addEventListener("click", () => {
   pushUndoSnapshot();
   game.quantumMode = !game.quantumMode;
   game.pendingQuantum = game.quantumMode ? { targets: [] } : null;
-  setMessage(game.quantumMode ? "Quantum mode on: select a piece, then two legal targets." : "Quantum mode off.");
+  setMessage(game.quantumMode ? "Quantum mode on: select a piece, then two legal targets." : "Quantum mode off.", false);
   render();
 });
 
