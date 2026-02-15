@@ -124,9 +124,6 @@ select:hover {
   padding: 12px 16px;
 }
 
-.status-panel p {
-  margin: 4px 0;
-}
 
 .message-history-wrap {
   margin-top: 8px;
@@ -145,7 +142,7 @@ select:hover {
 }
 
 .message-history {
-  max-height: 2.8em;
+  max-height: 3.9em;
   line-height: 1.25em;
   overflow-y: auto;
   background: #d4d4d2;

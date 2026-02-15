@@ -1,7 +1,4 @@
 const boardEl = document.getElementById("board");
-const turnTextEl = document.getElementById("turn-text");
-const quantumLeftEl = document.getElementById("quantum-left");
-const messageEl = document.getElementById("message");
 const messageHistoryEl = document.getElementById("message-history");
 const historyUpBtn = document.getElementById("history-up");
 const historyDownBtn = document.getElementById("history-down");
@@ -45,6 +42,7 @@ function initialGameState() {
     mode: "pvp",
     moveHistory: [],
     messageHistory: ["Select a piece to move."],
+    currentMessage: "Select a piece to move.",
     gameOver: false,
   };
 }
@@ -264,7 +262,7 @@ function allLegalMoves(color) {
 }
 
 function setMessage(msg) {
-  messageEl.textContent = msg;
+  game.currentMessage = msg;
   game.messageHistory.push(msg);
   historyNeedsScrollToBottom = true;
 }
@@ -424,12 +422,27 @@ function maybeAIMove() {
 
 function renderMessageHistory() {
   messageHistoryEl.innerHTML = "";
+
+  const liveLines = [
+    `Turn: ${game.turn === "w" ? "White" : "Black"}`,
+    `Quantum uses - White: ${game.quantumUses.w}, Black: ${game.quantumUses.b}`,
+    game.currentMessage,
+  ];
+
+  liveLines.forEach((line) => {
+    const el = document.createElement("div");
+    el.className = "history-line";
+    el.textContent = line;
+    messageHistoryEl.appendChild(el);
+  });
+
   game.messageHistory.forEach((line) => {
     const el = document.createElement("div");
     el.className = "history-line";
     el.textContent = line;
     messageHistoryEl.appendChild(el);
   });
+
   if (historyNeedsScrollToBottom) {
     messageHistoryEl.scrollTop = messageHistoryEl.scrollHeight;
     historyNeedsScrollToBottom = false;
@@ -475,8 +488,6 @@ function render() {
     }
   }
 
-  turnTextEl.textContent = `Turn: ${game.turn === "w" ? "White" : "Black"}`;
-  quantumLeftEl.textContent = `Quantum uses - White: ${game.quantumUses.w}, Black: ${game.quantumUses.b}`;
   quantumToggleBtn.classList.toggle("on", game.quantumMode);
   quantumToggleBtn.setAttribute("aria-pressed", String(game.quantumMode));
   quantumToggleBtn.disabled = game.quantumUses[game.turn] <= 0 || game.gameOver;
