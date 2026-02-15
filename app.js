@@ -21,6 +21,7 @@ const PIECES = {
 
 let game;
 let audioCtx;
+let historyNeedsScrollToBottom = true;
 
 function initialGameState() {
   const board = Array.from({ length: 8 }, () => Array(8).fill(null));
@@ -265,7 +266,7 @@ function allLegalMoves(color) {
 function setMessage(msg) {
   messageEl.textContent = msg;
   game.messageHistory.push(msg);
-  if (game.messageHistory.length > 70) game.messageHistory.shift();
+  historyNeedsScrollToBottom = true;
 }
 
 function showWinModal(text) {
@@ -423,13 +424,16 @@ function maybeAIMove() {
 
 function renderMessageHistory() {
   messageHistoryEl.innerHTML = "";
-  game.messageHistory.slice(-40).forEach((line) => {
+  game.messageHistory.forEach((line) => {
     const el = document.createElement("div");
     el.className = "history-line";
     el.textContent = line;
     messageHistoryEl.appendChild(el);
   });
-  messageHistoryEl.scrollTop = messageHistoryEl.scrollHeight;
+  if (historyNeedsScrollToBottom) {
+    messageHistoryEl.scrollTop = messageHistoryEl.scrollHeight;
+    historyNeedsScrollToBottom = false;
+  }
 }
 
 function render() {
@@ -504,6 +508,7 @@ newGameBtn.addEventListener("click", () => {
   game = initialGameState();
   game.mode = modeEl.value;
   winModalEl.classList.add("hidden");
+  historyNeedsScrollToBottom = true;
   setMessage("New game started.");
   render();
 });
@@ -514,6 +519,7 @@ closeModalBtn.addEventListener("click", () => {
 
 function init() {
   game = initialGameState();
+  historyNeedsScrollToBottom = true;
   render();
 }
 

@@ -145,11 +145,12 @@ select:hover {
 }
 
 .message-history {
-  max-height: 60px;
+  max-height: 2.8em;
+  line-height: 1.25em;
   overflow-y: auto;
   background: #d4d4d2;
   border-radius: 10px;
-  padding: 6px 10px;
+  padding: 4px 10px;
   font-size: 0.9rem;
 }
 
@@ -215,17 +216,18 @@ select:hover {
 }
 
 .piece.quantum {
-  color: #76ff8f;
-  opacity: 0.8;
-  text-shadow: 0 0 7px rgba(89, 255, 132, 0.6);
-  animation: hologram-flicker 140ms steps(2) infinite;
+  filter: none;
+  color: #19ff55;
+  opacity: 0.98;
+  text-shadow: 0 0 4px rgba(30, 255, 90, 0.9), 0 0 14px rgba(30, 255, 90, 0.7);
+  animation: hologram-flicker 110ms steps(2) infinite;
 }
 
 @keyframes hologram-flicker {
-  0% { opacity: 0.88; transform: translateY(0); }
-  30% { opacity: 0.55; transform: translateY(0.5px); }
-  55% { opacity: 0.86; transform: translateY(-0.3px); }
-  100% { opacity: 0.75; transform: translateY(0); }
+  0% { opacity: 1; transform: translateY(0); }
+  35% { opacity: 0.7; transform: translateY(0.6px); }
+  60% { opacity: 0.96; transform: translateY(-0.4px); }
+  100% { opacity: 0.82; transform: translateY(0); }
 }
 
 .square-label {
