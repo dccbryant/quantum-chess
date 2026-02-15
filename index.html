@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantum Chess</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <h1>Quantum Chess</h1>
+        <div class="controls">
+          <label for="mode">Mode</label>
+          <select id="mode">
+            <option value="pvp">User vs User</option>
+            <option value="ai">User vs Computer</option>
+          </select>
+          <button id="new-game">New Game</button>
+
+          <div class="quantum-control">
+            <span class="quantum-label">Quantum move</span>
+            <button id="quantum-toggle" class="toggle" type="button" aria-pressed="false" aria-label="Toggle quantum move">
+              <span class="knob"></span>
+            </button>
+            <span id="quantum-count" class="quantum-count">3 left</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="status-panel">
+        <p id="turn-text">Turn: White</p>
+        <p id="quantum-left">Quantum uses - White: 3, Black: 3</p>
+        <p id="message">Select a piece to move.</p>
+      </section>
+
+      <section class="board-wrap">
+        <div id="board" class="board" aria-label="Chess board"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
