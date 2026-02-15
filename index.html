@@ -32,12 +32,30 @@
         <p id="turn-text">Turn: White</p>
         <p id="quantum-left">Quantum uses - White: 3, Black: 3</p>
         <p id="message">Select a piece to move.</p>
+        <div class="message-history-wrap">
+          <button id="history-up" class="history-btn" type="button" aria-label="Scroll message history up">˄</button>
+          <div id="message-history" class="message-history" aria-live="polite"></div>
+          <button id="history-down" class="history-btn" type="button" aria-label="Scroll message history down">˅</button>
+        </div>
       </section>
 
       <section class="board-wrap">
         <div id="board" class="board" aria-label="Chess board"></div>
       </section>
     </main>
+
+    <div id="win-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="win-title">
+      <div class="modal-card">
+        <h2 id="win-title">Victory</h2>
+        <p id="win-text">White wins!</p>
+        <div class="quantum-graphic" aria-hidden="true">
+          <span>♔</span>
+          <span class="orb"></span>
+          <span>♛</span>
+        </div>
+        <button id="close-modal" type="button">Play Again</button>
+      </div>
+    </div>
 
     <script src="app.js"></script>
   </body>

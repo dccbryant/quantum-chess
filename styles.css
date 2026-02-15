@@ -7,7 +7,7 @@
   --accent: #676764;
   --selected: #bbbb75;
   --hint: #8d8d89;
-  --quantum: #6f6fb5;
+  --quantum: #65c983;
 }
 
 * {
@@ -128,6 +128,36 @@ select:hover {
   margin: 4px 0;
 }
 
+.message-history-wrap {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  gap: 8px;
+  align-items: center;
+}
+
+.history-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 14px;
+}
+
+.message-history {
+  max-height: 60px;
+  overflow-y: auto;
+  background: #d4d4d2;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
+.history-line {
+  margin: 2px 0;
+  opacity: 0.9;
+}
+
 .board-wrap {
   display: flex;
   justify-content: center;
@@ -185,8 +215,17 @@ select:hover {
 }
 
 .piece.quantum {
-  opacity: 0.7;
-  text-shadow: 0 0 10px rgba(95, 95, 190, 0.4);
+  color: #76ff8f;
+  opacity: 0.8;
+  text-shadow: 0 0 7px rgba(89, 255, 132, 0.6);
+  animation: hologram-flicker 140ms steps(2) infinite;
+}
+
+@keyframes hologram-flicker {
+  0% { opacity: 0.88; transform: translateY(0); }
+  30% { opacity: 0.55; transform: translateY(0.5px); }
+  55% { opacity: 0.86; transform: translateY(-0.3px); }
+  100% { opacity: 0.75; transform: translateY(0); }
 }
 
 .square-label {
@@ -195,4 +234,43 @@ select:hover {
   left: 4px;
   bottom: 2px;
   opacity: 0.5;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-card {
+  width: min(420px, 90vw);
+  background: #efefed;
+  border-radius: 18px;
+  padding: 18px;
+  text-align: center;
+}
+
+.quantum-graphic {
+  margin: 12px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 34px;
+}
+
+.quantum-graphic .orb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #9cfdb1 0%, #6fce83 70%, #4a925a 100%);
+  box-shadow: 0 0 14px rgba(80, 220, 112, 0.7);
 }

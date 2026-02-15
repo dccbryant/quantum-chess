@@ -2,10 +2,16 @@ const boardEl = document.getElementById("board");
 const turnTextEl = document.getElementById("turn-text");
 const quantumLeftEl = document.getElementById("quantum-left");
 const messageEl = document.getElementById("message");
+const messageHistoryEl = document.getElementById("message-history");
+const historyUpBtn = document.getElementById("history-up");
+const historyDownBtn = document.getElementById("history-down");
 const quantumToggleBtn = document.getElementById("quantum-toggle");
 const quantumCountEl = document.getElementById("quantum-count");
 const modeEl = document.getElementById("mode");
 const newGameBtn = document.getElementById("new-game");
+const winModalEl = document.getElementById("win-modal");
+const winTextEl = document.getElementById("win-text");
+const closeModalBtn = document.getElementById("close-modal");
 
 const FILES = "abcdefgh";
 const PIECES = {
@@ -37,6 +43,8 @@ function initialGameState() {
     enPassantTarget: null,
     mode: "pvp",
     moveHistory: [],
+    messageHistory: ["Select a piece to move."],
+    gameOver: false,
   };
 }
 
@@ -51,8 +59,8 @@ function getAudio() {
 function playTone(kind) {
   const ctx = getAudio();
   if (!ctx) return;
-
   if (ctx.state === "suspended") ctx.resume();
+
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain);
@@ -60,18 +68,19 @@ function playTone(kind) {
 
   const now = ctx.currentTime;
   const profile = {
-    select: { f1: 310, f2: 340, dur: 0.05, type: "triangle" },
-    move: { f1: 240, f2: 190, dur: 0.08, type: "square" },
-    quantum: { f1: 530, f2: 730, dur: 0.16, type: "sine" },
+    select: { f1: 310, f2: 340, dur: 0.05, type: "triangle", vol: 0.06 },
+    move: { f1: 240, f2: 190, dur: 0.08, type: "square", vol: 0.08 },
+    quantumIgnite: { f1: 180, f2: 860, dur: 0.22, type: "sawtooth", vol: 0.09 },
+    quantumCollapse: { f1: 760, f2: 130, dur: 0.18, type: "sawtooth", vol: 0.08 },
   }[kind];
 
   if (!profile) return;
   osc.type = profile.type;
   osc.frequency.setValueAtTime(profile.f1, now);
-  osc.frequency.linearRampToValueAtTime(profile.f2, now + profile.dur);
+  osc.frequency.exponentialRampToValueAtTime(profile.f2, now + profile.dur);
 
   gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(profile.vol, now + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, now + profile.dur);
 
   osc.start(now);
@@ -79,37 +88,28 @@ function playTone(kind) {
 }
 
 function toCoord(square) {
-  const file = FILES.indexOf(square[0]);
-  const rank = 8 - Number(square[1]);
-  return [rank, file];
+  return [8 - Number(square[1]), FILES.indexOf(square[0])];
 }
-
 function toSquare(r, c) {
   return `${FILES[c]}${8 - r}`;
 }
-
 function inBounds(r, c) {
   return r >= 0 && r < 8 && c >= 0 && c < 8;
 }
-
 function cloneBoard(board) {
   return board.map((row) => row.map((p) => (p ? { ...p } : null)));
 }
-
 function getQuantumAtSquare(square) {
   return game.quantumPieces.find((q) => q.positions.includes(square));
 }
-
 function pieceAt(board, r, c, quantumAsSolid = true) {
   const piece = board[r][c];
   if (piece) return piece;
   if (!quantumAsSolid) return null;
   const sq = toSquare(r, c);
   const qPiece = game.quantumPieces.find((q) => q.positions.includes(sq));
-  if (!qPiece) return null;
-  return { type: qPiece.type, color: qPiece.color, quantumId: qPiece.id };
+  return qPiece ? { type: qPiece.type, color: qPiece.color, quantumId: qPiece.id } : null;
 }
-
 function pushMove(moves, r, c, opts = {}) {
   if (inBounds(r, c)) moves.push({ r, c, ...opts });
 }
@@ -117,7 +117,6 @@ function pushMove(moves, r, c, opts = {}) {
 function pseudoMoves(board, r, c, color, forAttack = false) {
   const piece = board[r][c];
   if (!piece || piece.color !== color) return [];
-
   const moves = [];
   const dir = color === "w" ? -1 : 1;
 
@@ -127,40 +126,26 @@ function pseudoMoves(board, r, c, color, forAttack = false) {
       if (!forAttack && inBounds(one, c) && !pieceAt(board, one, c)) {
         pushMove(moves, one, c, { kind: "move" });
         const two = r + dir * 2;
-        if (!piece.moved && inBounds(two, c) && !pieceAt(board, two, c)) {
-          pushMove(moves, two, c, { kind: "double" });
-        }
+        if (!piece.moved && inBounds(two, c) && !pieceAt(board, two, c)) pushMove(moves, two, c, { kind: "double" });
       }
       for (const dc of [-1, 1]) {
         const tr = r + dir;
         const tc = c + dc;
         if (!inBounds(tr, tc)) continue;
-        if (forAttack) {
-          pushMove(moves, tr, tc, { kind: "attack" });
-          continue;
+        if (forAttack) pushMove(moves, tr, tc, { kind: "attack" });
+        else {
+          const target = pieceAt(board, tr, tc);
+          if (target && target.color !== color) pushMove(moves, tr, tc, { kind: "capture" });
         }
-        const target = pieceAt(board, tr, tc);
-        if (target && target.color !== color) pushMove(moves, tr, tc, { kind: "capture" });
       }
       if (!forAttack && game.enPassantTarget) {
         const [er, ec] = toCoord(game.enPassantTarget);
-        if (er === r + dir && Math.abs(ec - c) === 1) {
-          pushMove(moves, er, ec, { kind: "enpassant" });
-        }
+        if (er === r + dir && Math.abs(ec - c) === 1) pushMove(moves, er, ec, { kind: "enpassant" });
       }
       break;
     }
     case "n": {
-      const jumps = [
-        [-2, -1],
-        [-2, 1],
-        [-1, -2],
-        [-1, 2],
-        [1, -2],
-        [1, 2],
-        [2, -1],
-        [2, 1],
-      ];
+      const jumps = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
       for (const [dr, dc] of jumps) {
         const tr = r + dr;
         const tc = c + dc;
@@ -181,9 +166,8 @@ function pseudoMoves(board, r, c, color, forAttack = false) {
         let tc = c + dc;
         while (inBounds(tr, tc)) {
           const t = pieceAt(board, tr, tc);
-          if (!t) {
-            pushMove(moves, tr, tc, { kind: "move" });
-          } else {
+          if (!t) pushMove(moves, tr, tc, { kind: "move" });
+          else {
             if (t.color !== color) pushMove(moves, tr, tc, { kind: "capture" });
             break;
           }
@@ -208,38 +192,14 @@ function pseudoMoves(board, r, c, color, forAttack = false) {
         const row = color === "w" ? 7 : 0;
         if (r === row && c === 4 && !isSquareAttacked(board, row, 4, color)) {
           const rookK = board[row][7];
-          if (
-            rookK &&
-            rookK.type === "r" &&
-            rookK.color === color &&
-            !rookK.moved &&
-            !pieceAt(board, row, 5) &&
-            !pieceAt(board, row, 6) &&
-            !isSquareAttacked(board, row, 5, color) &&
-            !isSquareAttacked(board, row, 6, color)
-          ) {
-            pushMove(moves, row, 6, { kind: "castle-k" });
-          }
+          if (rookK && rookK.type === "r" && rookK.color === color && !rookK.moved && !pieceAt(board, row, 5) && !pieceAt(board, row, 6) && !isSquareAttacked(board, row, 5, color) && !isSquareAttacked(board, row, 6, color)) pushMove(moves, row, 6, { kind: "castle-k" });
           const rookQ = board[row][0];
-          if (
-            rookQ &&
-            rookQ.type === "r" &&
-            rookQ.color === color &&
-            !rookQ.moved &&
-            !pieceAt(board, row, 1) &&
-            !pieceAt(board, row, 2) &&
-            !pieceAt(board, row, 3) &&
-            !isSquareAttacked(board, row, 3, color) &&
-            !isSquareAttacked(board, row, 2, color)
-          ) {
-            pushMove(moves, row, 2, { kind: "castle-q" });
-          }
+          if (rookQ && rookQ.type === "r" && rookQ.color === color && !rookQ.moved && !pieceAt(board, row, 1) && !pieceAt(board, row, 2) && !pieceAt(board, row, 3) && !isSquareAttacked(board, row, 3, color) && !isSquareAttacked(board, row, 2, color)) pushMove(moves, row, 2, { kind: "castle-q" });
         }
       }
       break;
     }
   }
-
   return moves;
 }
 
@@ -249,45 +209,33 @@ function isSquareAttacked(board, r, c, ownColor) {
     for (let cc = 0; cc < 8; cc++) {
       const p = board[rr][cc];
       if (!p || p.color !== enemy) continue;
-      const moves = pseudoMoves(board, rr, cc, enemy, true);
-      if (moves.some((m) => m.r === r && m.c === c)) return true;
+      if (pseudoMoves(board, rr, cc, enemy, true).some((m) => m.r === r && m.c === c)) return true;
     }
   }
   return false;
 }
-
 function findKing(board, color) {
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const p = board[r][c];
-      if (p && p.type === "k" && p.color === color) return [r, c];
-    }
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const p = board[r][c];
+    if (p && p.type === "k" && p.color === color) return [r, c];
   }
   return null;
 }
-
 function applyMove(board, from, move, color) {
   const copy = cloneBoard(board);
   const piece = copy[from.r][from.c];
   copy[from.r][from.c] = null;
-
-  if (move.kind === "enpassant") {
-    const capR = color === "w" ? move.r + 1 : move.r - 1;
-    copy[capR][move.c] = null;
-  }
-
+  if (move.kind === "enpassant") copy[color === "w" ? move.r + 1 : move.r - 1][move.c] = null;
   if (move.kind === "castle-k") {
     copy[move.r][5] = copy[move.r][7];
     copy[move.r][7] = null;
     if (copy[move.r][5]) copy[move.r][5].moved = true;
   }
-
   if (move.kind === "castle-q") {
     copy[move.r][3] = copy[move.r][0];
     copy[move.r][0] = null;
     if (copy[move.r][3]) copy[move.r][3].moved = true;
   }
-
   if (piece) {
     piece.moved = true;
     copy[move.r][move.c] = piece;
@@ -295,32 +243,34 @@ function applyMove(board, from, move, color) {
   }
   return copy;
 }
-
 function legalMovesForSquare(r, c, color = game.turn) {
   const piece = game.board[r][c];
   if (!piece || piece.color !== color) return [];
-  const raw = pseudoMoves(game.board, r, c, color, false);
-  return raw.filter((m) => {
+  return pseudoMoves(game.board, r, c, color, false).filter((m) => {
     const after = applyMove(game.board, { r, c }, m, color);
     const king = findKing(after, color);
     return king && !isSquareAttacked(after, king[0], king[1], color);
   });
 }
-
 function allLegalMoves(color) {
   const moves = [];
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const p = game.board[r][c];
-      if (!p || p.color !== color) continue;
-      legalMovesForSquare(r, c, color).forEach((m) => moves.push({ from: { r, c }, move: m }));
-    }
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const p = game.board[r][c];
+    if (!p || p.color !== color) continue;
+    legalMovesForSquare(r, c, color).forEach((m) => moves.push({ from: { r, c }, move: m }));
   }
   return moves;
 }
 
 function setMessage(msg) {
   messageEl.textContent = msg;
+  game.messageHistory.push(msg);
+  if (game.messageHistory.length > 70) game.messageHistory.shift();
+}
+
+function showWinModal(text) {
+  winTextEl.textContent = text;
+  winModalEl.classList.remove("hidden");
 }
 
 function completeTurn(baseMessage = "") {
@@ -335,12 +285,14 @@ function completeTurn(baseMessage = "") {
   const inCheck = king ? isSquareAttacked(game.board, king[0], king[1], game.turn) : false;
 
   if (!opponentMoves.length) {
-    setMessage(inCheck ? `Checkmate! ${game.turn === "w" ? "Black" : "White"} wins.` : "Stalemate.");
-  } else if (inCheck) {
-    setMessage(baseMessage ? `${baseMessage} Check.` : "Check.");
-  } else if (baseMessage) {
-    setMessage(baseMessage);
-  }
+    game.gameOver = true;
+    if (inCheck) {
+      const winner = game.turn === "w" ? "Black" : "White";
+      setMessage(`Checkmate! ${winner} wins.`);
+      showWinModal(`🎉 ${winner} wins Quantum Chess!`);
+    } else setMessage("Stalemate.");
+  } else if (inCheck) setMessage(baseMessage ? `${baseMessage} Check.` : "Check.");
+  else if (baseMessage) setMessage(baseMessage);
 
   render();
   maybeAIMove();
@@ -357,33 +309,35 @@ function collapseForOwnerMovement(sourceSq) {
 
 function materializeBySelection(sourceSq) {
   if (!collapseForOwnerMovement(sourceSq)) return false;
-  playTone("quantum");
+  playTone("quantumCollapse");
   completeTurn(`Waveform collapsed at ${sourceSq}.`);
   return true;
 }
 
 function tryCollapseOnCapture(targetSq) {
   const q = getQuantumAtSquare(targetSq);
-  if (!q) return;
+  if (!q) return "";
+  playTone("quantumCollapse");
   const survive = Math.random() < 0.5;
   const other = q.positions.find((s) => s !== targetSq);
   game.quantumPieces = game.quantumPieces.filter((qp) => qp.id !== q.id);
   if (survive && other) {
     const [or, oc] = toCoord(other);
     game.board[or][oc] = { type: q.type, color: q.color, moved: true };
-    setMessage(`Waveform collapsed: piece survived at ${other}.`);
-  } else {
-    setMessage(`Waveform collapsed: piece was at ${targetSq} and got captured.`);
+    return `Waveform collapsed: piece survived at ${other}.`;
   }
+  return `Waveform collapsed: piece was at ${targetSq} and got captured.`;
 }
 
 function executeMove(from, move) {
+  if (game.gameOver) return false;
   const piece = game.board[from.r][from.c];
   if (!piece) return false;
 
   const targetSq = toSquare(move.r, move.c);
+  let collapseMsg = "";
   const targetPiece = pieceAt(game.board, move.r, move.c);
-  if (targetPiece && targetPiece.quantumId) tryCollapseOnCapture(targetSq);
+  if (targetPiece && targetPiece.quantumId) collapseMsg = tryCollapseOnCapture(targetSq);
 
   game.board = applyMove(game.board, from, move, game.turn);
   game.enPassantTarget = null;
@@ -394,11 +348,12 @@ function executeMove(from, move) {
 
   game.moveHistory.push(`${toSquare(from.r, from.c)}-${targetSq}`);
   playTone("move");
-  completeTurn();
+  completeTurn(collapseMsg);
   return true;
 }
 
 function createQuantumMove(from, toA, toB) {
+  if (game.gameOver) return;
   const piece = game.board[from.r][from.c];
   if (!piece) return;
   const id = `q${Date.now()}${Math.floor(Math.random() * 1e5)}`;
@@ -406,20 +361,15 @@ function createQuantumMove(from, toA, toB) {
   const sqB = toSquare(toB.r, toB.c);
 
   game.board[from.r][from.c] = null;
-  game.quantumPieces.push({
-    id,
-    color: piece.color,
-    type: piece.type,
-    positions: [sqA, sqB],
-    moved: true,
-  });
+  game.quantumPieces.push({ id, color: piece.color, type: piece.type, positions: [sqA, sqB], moved: true });
 
   game.quantumUses[game.turn] -= 1;
-  playTone("quantum");
+  playTone("quantumIgnite");
   completeTurn(`Quantum split created at ${sqA} and ${sqB}.`);
 }
 
 function squareClick(r, c) {
+  if (game.gameOver) return;
   const sq = toSquare(r, c);
   const piece = game.board[r][c];
 
@@ -428,9 +378,8 @@ function squareClick(r, c) {
     if (chosen) {
       const exists = game.pendingQuantum.targets.find((t) => t.r === r && t.c === c);
       if (!exists) game.pendingQuantum.targets.push({ r, c });
-      if (game.pendingQuantum.targets.length === 2) {
-        createQuantumMove(game.selected, game.pendingQuantum.targets[0], game.pendingQuantum.targets[1]);
-      } else {
+      if (game.pendingQuantum.targets.length === 2) createQuantumMove(game.selected, game.pendingQuantum.targets[0], game.pendingQuantum.targets[1]);
+      else {
         setMessage("Select a second legal destination to complete superposition.");
         render();
       }
@@ -440,17 +389,11 @@ function squareClick(r, c) {
 
   if (game.selected) {
     const move = game.legalMoves.find((m) => m.r === r && m.c === c);
-    if (move && !game.quantumMode) {
-      executeMove(game.selected, move);
-      return;
-    }
+    if (move && !game.quantumMode) return executeMove(game.selected, move);
   }
 
   const qPiece = getQuantumAtSquare(sq);
-  if (qPiece && qPiece.color === game.turn) {
-    materializeBySelection(sq);
-    return;
-  }
+  if (qPiece && qPiece.color === game.turn) return materializeBySelection(sq);
 
   if (piece && piece.color === game.turn) {
     game.selected = { r, c };
@@ -463,12 +406,11 @@ function squareClick(r, c) {
     game.legalMoves = [];
     game.pendingQuantum = null;
   }
-
   render();
 }
 
 function maybeAIMove() {
-  if (game.mode !== "ai" || game.turn !== "b") return;
+  if (game.mode !== "ai" || game.turn !== "b" || game.gameOver) return;
   setTimeout(() => {
     const moves = allLegalMoves("b");
     if (!moves.length) return;
@@ -479,15 +421,24 @@ function maybeAIMove() {
   }, 320);
 }
 
+function renderMessageHistory() {
+  messageHistoryEl.innerHTML = "";
+  game.messageHistory.slice(-40).forEach((line) => {
+    const el = document.createElement("div");
+    el.className = "history-line";
+    el.textContent = line;
+    messageHistoryEl.appendChild(el);
+  });
+  messageHistoryEl.scrollTop = messageHistoryEl.scrollHeight;
+}
+
 function render() {
   boardEl.innerHTML = "";
-
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       const sq = document.createElement("button");
       sq.className = `square ${(r + c) % 2 === 0 ? "light" : "dark"}`;
       sq.type = "button";
-
       const id = toSquare(r, c);
       if (game.selected && game.selected.r === r && game.selected.c === c) sq.classList.add("selected");
       if (game.legalMoves.some((m) => m.r === r && m.c === c)) sq.classList.add("hint");
@@ -522,22 +473,27 @@ function render() {
 
   turnTextEl.textContent = `Turn: ${game.turn === "w" ? "White" : "Black"}`;
   quantumLeftEl.textContent = `Quantum uses - White: ${game.quantumUses.w}, Black: ${game.quantumUses.b}`;
-
   quantumToggleBtn.classList.toggle("on", game.quantumMode);
   quantumToggleBtn.setAttribute("aria-pressed", String(game.quantumMode));
-  quantumToggleBtn.disabled = game.quantumUses[game.turn] <= 0;
+  quantumToggleBtn.disabled = game.quantumUses[game.turn] <= 0 || game.gameOver;
   quantumCountEl.textContent = `${game.quantumUses[game.turn]} left`;
+  renderMessageHistory();
 }
 
 quantumToggleBtn.addEventListener("click", () => {
-  if (game.quantumUses[game.turn] <= 0) {
-    setMessage("No quantum opportunities left for this side.");
-    return;
-  }
+  if (game.gameOver) return;
+  if (game.quantumUses[game.turn] <= 0) return setMessage("No quantum opportunities left for this side."), render();
   game.quantumMode = !game.quantumMode;
   game.pendingQuantum = game.quantumMode ? { targets: [] } : null;
   setMessage(game.quantumMode ? "Quantum mode on: select a piece, then two legal targets." : "Quantum mode off.");
   render();
+});
+
+historyUpBtn.addEventListener("click", () => {
+  messageHistoryEl.scrollBy({ top: -40, behavior: "smooth" });
+});
+historyDownBtn.addEventListener("click", () => {
+  messageHistoryEl.scrollBy({ top: 40, behavior: "smooth" });
 });
 
 modeEl.addEventListener("change", () => {
@@ -547,8 +503,13 @@ modeEl.addEventListener("change", () => {
 newGameBtn.addEventListener("click", () => {
   game = initialGameState();
   game.mode = modeEl.value;
+  winModalEl.classList.add("hidden");
   setMessage("New game started.");
   render();
+});
+
+closeModalBtn.addEventListener("click", () => {
+  winModalEl.classList.add("hidden");
 });
 
 function init() {
