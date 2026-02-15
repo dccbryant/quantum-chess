@@ -6,6 +6,8 @@ const quantumToggleBtn = document.getElementById("quantum-toggle");
 const quantumCountEl = document.getElementById("quantum-count");
 const modeEl = document.getElementById("mode");
 const newGameBtn = document.getElementById("new-game");
+const undoBtn = document.getElementById("undo");
+const redoBtn = document.getElementById("redo");
 const winModalEl = document.getElementById("win-modal");
 const winTextEl = document.getElementById("win-text");
 const closeModalBtn = document.getElementById("close-modal");
@@ -44,6 +46,8 @@ function initialGameState() {
     messageHistory: ["Select a piece to move."],
     currentMessage: "Select a piece to move.",
     gameOver: false,
+    undoStack: [],
+    redoStack: [],
   };
 }
 
@@ -71,6 +75,8 @@ function playTone(kind) {
     move: { f1: 240, f2: 190, dur: 0.08, type: "square", vol: 0.08 },
     quantumIgnite: { f1: 180, f2: 860, dur: 0.22, type: "sawtooth", vol: 0.09 },
     quantumCollapse: { f1: 760, f2: 130, dur: 0.18, type: "sawtooth", vol: 0.08 },
+    button: { f1: 420, f2: 360, dur: 0.035, type: "triangle", vol: 0.045 },
+    restart: { f1: 300, f2: 520, dur: 0.12, type: "triangle", vol: 0.07 },
   }[kind];
 
   if (!profile) return;
@@ -261,6 +267,73 @@ function allLegalMoves(color) {
   return moves;
 }
 
+
+function snapshotState() {
+  return JSON.parse(JSON.stringify({
+    board: game.board,
+    turn: game.turn,
+    selected: game.selected,
+    legalMoves: game.legalMoves,
+    quantumMode: game.quantumMode,
+    pendingQuantum: game.pendingQuantum,
+    quantumPieces: game.quantumPieces,
+    quantumUses: game.quantumUses,
+    enPassantTarget: game.enPassantTarget,
+    mode: game.mode,
+    moveHistory: game.moveHistory,
+    messageHistory: game.messageHistory,
+    currentMessage: game.currentMessage,
+    gameOver: game.gameOver,
+    winModalOpen: !winModalEl.classList.contains("hidden"),
+  }));
+}
+
+function restoreSnapshot(state) {
+  game.board = state.board;
+  game.turn = state.turn;
+  game.selected = state.selected;
+  game.legalMoves = state.legalMoves;
+  game.quantumMode = state.quantumMode;
+  game.pendingQuantum = state.pendingQuantum;
+  game.quantumPieces = state.quantumPieces;
+  game.quantumUses = state.quantumUses;
+  game.enPassantTarget = state.enPassantTarget;
+  game.mode = state.mode;
+  modeEl.value = game.mode;
+  game.moveHistory = state.moveHistory;
+  game.messageHistory = state.messageHistory;
+  game.currentMessage = state.currentMessage;
+  game.gameOver = state.gameOver;
+  if (state.winModalOpen) winModalEl.classList.remove("hidden");
+  else winModalEl.classList.add("hidden");
+}
+
+function pushUndoSnapshot() {
+  game.undoStack.push(snapshotState());
+  if (game.undoStack.length > 200) game.undoStack.shift();
+  game.redoStack = [];
+}
+
+function undoMove() {
+  if (!game.undoStack.length) return;
+  const current = snapshotState();
+  const prev = game.undoStack.pop();
+  game.redoStack.push(current);
+  restoreSnapshot(prev);
+  historyNeedsScrollToBottom = true;
+  render();
+}
+
+function redoMove() {
+  if (!game.redoStack.length) return;
+  const current = snapshotState();
+  const next = game.redoStack.pop();
+  game.undoStack.push(current);
+  restoreSnapshot(next);
+  historyNeedsScrollToBottom = true;
+  render();
+}
+
 function setMessage(msg) {
   game.currentMessage = msg;
   game.messageHistory.push(msg);
@@ -307,6 +380,7 @@ function collapseForOwnerMovement(sourceSq) {
 }
 
 function materializeBySelection(sourceSq) {
+  pushUndoSnapshot();
   if (!collapseForOwnerMovement(sourceSq)) return false;
   playTone("quantumCollapse");
   completeTurn(`Waveform collapsed at ${sourceSq}.`);
@@ -330,6 +404,7 @@ function tryCollapseOnCapture(targetSq) {
 
 function executeMove(from, move) {
   if (game.gameOver) return false;
+  pushUndoSnapshot();
   const piece = game.board[from.r][from.c];
   if (!piece) return false;
 
@@ -353,6 +428,7 @@ function executeMove(from, move) {
 
 function createQuantumMove(from, toA, toB) {
   if (game.gameOver) return;
+  pushUndoSnapshot();
   const piece = game.board[from.r][from.c];
   if (!piece) return;
   const id = `q${Date.now()}${Math.floor(Math.random() * 1e5)}`;
@@ -492,12 +568,15 @@ function render() {
   quantumToggleBtn.setAttribute("aria-pressed", String(game.quantumMode));
   quantumToggleBtn.disabled = game.quantumUses[game.turn] <= 0 || game.gameOver;
   quantumCountEl.textContent = `${game.quantumUses[game.turn]} left`;
+  undoBtn.disabled = game.undoStack.length === 0;
+  redoBtn.disabled = game.redoStack.length === 0;
   renderMessageHistory();
 }
 
 quantumToggleBtn.addEventListener("click", () => {
   if (game.gameOver) return;
   if (game.quantumUses[game.turn] <= 0) return setMessage("No quantum opportunities left for this side."), render();
+  pushUndoSnapshot();
   game.quantumMode = !game.quantumMode;
   game.pendingQuantum = game.quantumMode ? { targets: [] } : null;
   setMessage(game.quantumMode ? "Quantum mode on: select a piece, then two legal targets." : "Quantum mode off.");
@@ -511,11 +590,20 @@ historyDownBtn.addEventListener("click", () => {
   messageHistoryEl.scrollBy({ top: 40, behavior: "smooth" });
 });
 
+undoBtn.addEventListener("click", () => {
+  undoMove();
+});
+
+redoBtn.addEventListener("click", () => {
+  redoMove();
+});
+
 modeEl.addEventListener("change", () => {
   game.mode = modeEl.value;
 });
 
 newGameBtn.addEventListener("click", () => {
+  playTone("restart");
   game = initialGameState();
   game.mode = modeEl.value;
   winModalEl.classList.add("hidden");
@@ -526,6 +614,12 @@ newGameBtn.addEventListener("click", () => {
 
 closeModalBtn.addEventListener("click", () => {
   winModalEl.classList.add("hidden");
+});
+
+document.addEventListener("click", (event) => {
+  const btn = event.target.closest("button");
+  if (!btn || btn.classList.contains("square")) return;
+  playTone("button");
 });
 
 function init() {
