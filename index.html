@@ -31,9 +31,11 @@
 
       <section class="status-panel">
         <div class="message-history-wrap">
-          <button id="history-up" class="history-btn" type="button" aria-label="Scroll message history up">˄</button>
           <div id="message-history" class="message-history" aria-live="polite"></div>
-          <button id="history-down" class="history-btn" type="button" aria-label="Scroll message history down">˅</button>
+          <div class="history-controls" aria-hidden="false">
+            <button id="history-up" class="history-btn" type="button" aria-label="Scroll message history up">˄</button>
+            <button id="history-down" class="history-btn" type="button" aria-label="Scroll message history down">˅</button>
+          </div>
         </div>
       </section>
 
