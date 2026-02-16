@@ -518,16 +518,109 @@ function squareClick(r, c) {
   render();
 }
 
+const AI_PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+
+function evaluateBoardPosition() {
+  let score = 0;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = game.board[r][c];
+      if (!p) continue;
+      const value = AI_PIECE_VALUES[p.type] || 0;
+      score += p.color === "b" ? value : -value;
+
+      if (p.type === "p") {
+        const advance = p.color === "b" ? r : 7 - r;
+        score += p.color === "b" ? advance * 6 : -advance * 6;
+      }
+      if (p.type === "n" || p.type === "b") {
+        const centrality = 3.5 - Math.abs(3.5 - r) - Math.abs(3.5 - c);
+        score += p.color === "b" ? centrality * 8 : -centrality * 8;
+      }
+    }
+  }
+
+  const blackMobility = allLegalMoves("b").length;
+  const whiteMobility = allLegalMoves("w").length;
+  score += (blackMobility - whiteMobility) * 2;
+  return score;
+}
+
+function nextEnPassantAfterMove(piece, from, move) {
+  if (piece && piece.type === "p" && move.kind === "double") {
+    const passR = (from.r + move.r) / 2;
+    return toSquare(passR, from.c);
+  }
+  return null;
+}
+
+function withSimulatedState(board, enPassantTarget, fn) {
+  const savedBoard = game.board;
+  const savedEnPassant = game.enPassantTarget;
+  game.board = board;
+  game.enPassantTarget = enPassantTarget;
+  const result = fn();
+  game.board = savedBoard;
+  game.enPassantTarget = savedEnPassant;
+  return result;
+}
+
+function minimax(depth, sideToMove) {
+  const moves = allLegalMoves(sideToMove);
+  const king = findKing(game.board, sideToMove);
+  const inCheck = king ? isSquareAttacked(game.board, king[0], king[1], sideToMove) : false;
+
+  if (!moves.length) {
+    if (inCheck) return sideToMove === "b" ? -1e7 : 1e7;
+    return 0;
+  }
+
+  if (depth === 0) return evaluateBoardPosition();
+
+  let best = sideToMove === "b" ? -Infinity : Infinity;
+  for (const candidate of moves) {
+    const piece = game.board[candidate.from.r][candidate.from.c];
+    if (!piece) continue;
+    const boardAfter = applyMove(game.board, candidate.from, candidate.move, sideToMove);
+    const enPassantAfter = nextEnPassantAfterMove(piece, candidate.from, candidate.move);
+
+    const score = withSimulatedState(boardAfter, enPassantAfter, () => minimax(depth - 1, sideToMove === "b" ? "w" : "b"));
+    if (sideToMove === "b") best = Math.max(best, score);
+    else best = Math.min(best, score);
+  }
+  return best;
+}
+
+function pickBestAIMove() {
+  const candidates = allLegalMoves("b");
+  if (!candidates.length) return null;
+
+  let bestScore = -Infinity;
+  let bestMoves = [];
+
+  for (const candidate of candidates) {
+    const piece = game.board[candidate.from.r][candidate.from.c];
+    if (!piece) continue;
+    const boardAfter = applyMove(game.board, candidate.from, candidate.move, "b");
+    const enPassantAfter = nextEnPassantAfterMove(piece, candidate.from, candidate.move);
+    const score = withSimulatedState(boardAfter, enPassantAfter, () => minimax(1, "w"));
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMoves = [candidate];
+    } else if (score === bestScore) bestMoves.push(candidate);
+  }
+
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)] || candidates[0];
+}
+
 function maybeAIMove() {
   if (game.mode !== "ai" || game.turn !== "b" || game.gameOver) return;
   setTimeout(() => {
-    const moves = allLegalMoves("b");
-    if (!moves.length) return;
-    const captures = moves.filter((m) => !!pieceAt(game.board, m.move.r, m.move.c));
-    const pool = captures.length ? captures : moves;
-    const pick = pool[Math.floor(Math.random() * pool.length)];
+    const pick = pickBestAIMove();
+    if (!pick) return;
     executeMove(pick.from, pick.move);
-  }, 320);
+  }, 280);
 }
 
 function renderMessageHistory() {
