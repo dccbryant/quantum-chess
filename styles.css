@@ -48,17 +48,15 @@ h1 {
   margin: 0;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.34em;
   align-self: stretch;
-  text-align: justify;
-  text-align-last: justify;
-  text-justify: inter-character;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
 }
 
-h1::after {
-  content: "";
+.title-word {
   display: inline-block;
-  width: 100%;
+  letter-spacing: 0.24em;
 }
 
 .controls {
