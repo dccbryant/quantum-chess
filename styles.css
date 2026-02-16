@@ -148,17 +148,19 @@ select:hover {
 .message-history-wrap {
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr 34px;
-  gap: 8px;
+  grid-template-columns: 1fr 42px;
+  gap: 10px;
   align-items: center;
 }
 
 .history-controls {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 8px;
   align-items: center;
   justify-content: center;
+  justify-self: center;
 }
 
 .history-btn {
@@ -167,6 +169,10 @@ select:hover {
   border-radius: 50%;
   padding: 0;
   font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .message-history {
