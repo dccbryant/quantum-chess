@@ -1,1 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#d8d8d6"/><text x="50%" y="56%" text-anchor="middle" font-size="36" font-family="Gill Sans, sans-serif" fill="#2f2f2d">♞</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#d8d8d6"/>
+  <text x="50%" y="56%" text-anchor="middle" font-size="26" font-weight="700" letter-spacing="0.04em" font-family="Gill Sans, Gill Sans MT, Calibri, Trebuchet MS, sans-serif" fill="#2f2f2d">QC</text>
+</svg>
