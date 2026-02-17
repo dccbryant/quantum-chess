@@ -42,7 +42,7 @@ function initialGameState() {
     quantumPieces: [],
     quantumUses: { w: 3, b: 3 },
     enPassantTarget: null,
-    mode: "pvp",
+    mode: "ai",
     moveHistory: [],
     messageHistory: ["Select a piece to move."],
     currentMessage: "Select a piece to move.",
