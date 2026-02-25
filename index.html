@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantum Chess</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <h1>Quantum Chess</h1>
+        <div class="controls">
+          <select id="mode" aria-label="Game mode">
+            <option value="pvp">User vs User</option>
+            <option value="ai" selected>User vs CPU</option>
+          </select>
+          <button id="new-game">New Game</button>
+          <button id="undo" aria-label="Undo">Undo</button>
+          <button id="redo" aria-label="Redo">Redo</button>
+
+          <div class="quantum-control">
+            <span class="quantum-label">Quantum move</span>
+            <button id="quantum-toggle" class="toggle" type="button" aria-pressed="false" aria-label="Toggle quantum move">
+              <span class="knob"></span>
+            </button>
+            <span id="quantum-count" class="quantum-count">-- left</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="status-panel">
+        <div class="message-history-wrap">
+          <div id="message-history" class="message-history" aria-live="polite"></div>
+          <div class="history-controls" aria-hidden="false">
+            <button id="history-up" class="history-btn" type="button" aria-label="Scroll message history up">▲</button>
+            <button id="history-down" class="history-btn" type="button" aria-label="Scroll message history down">▼</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="board-wrap">
+        <div id="board" class="board" aria-label="Chess board"></div>
+      </section>
+    </main>
+
+    <div id="win-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="win-title">
+      <div class="modal-card">
+        <h2 id="win-title">Victory</h2>
+        <p id="win-text">White wins!</p>
+        <div class="quantum-graphic" aria-hidden="true">
+          <span>♔</span>
+          <span class="orb"></span>
+          <span>♛</span>
+        </div>
+        <button id="close-modal" type="button">Play Again</button>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
