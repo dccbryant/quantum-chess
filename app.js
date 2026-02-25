@@ -40,7 +40,7 @@ function initialGameState() {
     quantumMode: false,
     pendingQuantum: null,
     quantumPieces: [],
-    quantumUses: { w: 3, b: 3 },
+    quantumUses: { w: 5, b: 5 },
     enPassantTarget: null,
     mode: "ai",
     moveHistory: [],
